@@ -3,6 +3,7 @@ const { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = r
 const { Boom } = require('@hapi/boom')
 const pino = require('pino')
 const qrcode = require('qrcode-terminal')
+const askAI = require("./ai/engine");
 
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_session')
@@ -50,8 +51,7 @@ async function startBot() {
       console.log('Menghubungkan ke WhatsApp...')
 
     } else if (connection === 'open') {
-      console.log('✅ Berhasil connect ke WhatsApp!')
-      console.log('Kirim "ping" ke nomor ini untuk test.')
+      console.log('Berhasil connect ke WhatsApp!')
     }
   })
 
@@ -68,9 +68,20 @@ async function startBot() {
 
       console.log(`Pesan dari ${sender}: ${teks}`)
 
-      if (teks.toLowerCase() === 'ping') {
-        await sock.sendMessage(sender, { text: '🏓 Pong! Bot aktif.' })
-        console.log('Balasan pong terkirim')
+      if (teks.startsWith(".ai")) {
+          const prompt = teks.replace(".ai", "").trim();
+          if (!prompt) {
+              return await sock.sendMessage(sender, {
+                  text: "Contoh:\n.ai buat CRUD produk PHP"
+              });
+          }
+          await sock.sendMessage(sender, {
+              text: "Sedang berpikir..."
+          });
+          const reply = await askAI(prompt);
+          await sock.sendMessage(sender, {
+              text: reply
+          });
       }
     }
   })
